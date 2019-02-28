@@ -33,5 +33,8 @@ public abstract class Loggable {
 	 */
 	public void log(Class<?> c, Exception ex) {
 		log(c, Level.SEVERE, ex.getMessage());
+		for(StackTraceElement el : ex.getStackTrace()) {
+			log(c, Level.SEVERE,  "\t| " + el.toString());
+		}
 	}
 }
