@@ -17,6 +17,11 @@ bin/
 
 *.prefs
 
+# Eclipse
+.classpath
+.project
+*.swp
+
 # IntelliJ / Idea
 *.idea
 log/
