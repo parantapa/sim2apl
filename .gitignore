@@ -20,3 +20,5 @@ bin/
 # IntelliJ / Idea
 *.idea
 log/
+*.classpath
+*.project

@@ -1,6 +1,7 @@
 package org.uu.nl.net2apl.core.agent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.uu.nl.net2apl.core.defaults.deliberationsteps.ApplyExternalTriggerPlanSchemes;
@@ -19,6 +20,7 @@ public class AgentArguments {
 
 	private final List<PlanScheme> goalPlanSchemes, internalTriggerPlanSchemes, externalTriggerPlanSchemes, messagePlanSchemes;
 	private final List<Context> contexts;
+	private final HashMap<Context, Class<? extends Context>[]> explicitKeyContexts;
 	private final List<Plan> initialPlans;
 	private final List<Plan> downPlans;
 		
@@ -28,6 +30,7 @@ public class AgentArguments {
 		this.externalTriggerPlanSchemes = new ArrayList<>();
 		this.messagePlanSchemes = new ArrayList<>();
 		this.contexts = new ArrayList<>();
+		this.explicitKeyContexts = new HashMap<>();
 		this.initialPlans = new ArrayList<>();
 		this.downPlans = new ArrayList<>();
 	}
@@ -42,6 +45,9 @@ public class AgentArguments {
 		ContextContainer container = new ContextContainer();
 		for(Context context : this.contexts)
 			container.addContext(context);
+		for(Context context : this.explicitKeyContexts.keySet()) {
+			container.addImplementedContext(context, this.explicitKeyContexts.get(context));
+		}
 		return container;
 	}
 	
@@ -88,6 +94,8 @@ public class AgentArguments {
 	public final AgentArguments addGoalPlanScheme(final FunctionalPlanSchemeInterface planScheme){ this.goalPlanSchemes.add(new FunctionalPlanScheme(planScheme)); return this; }
 	/** Add a context that is used for decision making and plan execution. */
 	public final AgentArguments addContext(final Context context){ this.contexts.add(context); return this; }
+	/** Add a context that is used for decision making and plan execution with one or more explicit lookup keys. */
+	public final AgentArguments addContext(final Context context, Class<? extends Context> ... keys){ this.explicitKeyContexts.put(context, keys); return this; }
 	/** Add a plan that will be executed in the first deliberation cycle. */
 	public final AgentArguments addInitialPlan(final Plan plan){ this.initialPlans.add(plan); return this; }
 	/** Add a plan that will be executed after the last deliberation cycle this agent will participate in. */
@@ -105,6 +113,7 @@ public class AgentArguments {
 		this.initialPlans.addAll(builder.initialPlans);
 		this.downPlans.addAll(builder.downPlans);
 		this.contexts.addAll(builder.contexts);
+		this.explicitKeyContexts.putAll(builder.explicitKeyContexts);
 		return this;
 	}
 }

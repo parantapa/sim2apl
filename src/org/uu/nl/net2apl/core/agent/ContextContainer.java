@@ -34,6 +34,24 @@ public final class ContextContainer {
 	}
 
 	/**
+	 * Store a new context with one or more explicitly provided classes as keys. Useful if one context extends or
+	 * implements multiple (context) classes or interfaces, which should be used for lookup
+	 *
+	 * Contexts for existing keys will be overwritten!
+	 *
+	 * @param context 	Context to store
+	 * @param keys 		List of keys this context should be associated with.
+	 */
+	public final void addImplementedContext(final Context context, Class<? extends Context> ... keys) {
+		boolean mainClassGiven = false;
+		for (Class<? extends Context> key : keys) {
+			this.map.put(key, context);
+			if(context.getClass().equals(key)) mainClassGiven = true;
+		}
+		if(!mainClassGiven) this.map.put(context.getClass(), context);
+	}
+
+	/**
 	 * Suppressed unchecked warning because the add method ensures that the cast
 	 * will always be successful.
 	 * 
