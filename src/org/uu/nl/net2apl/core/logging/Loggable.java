@@ -32,6 +32,12 @@ public abstract class Loggable {
 	 * @param ex The exception to log
 	 */
 	public void log(Class<?> c, Exception ex) {
-		log(c, Level.SEVERE, ex.getMessage());
+		String msg = ex.getMessage() == null ? "<No Message>" : ex.getMessage();
+		log(c, Level.SEVERE, msg);
+		if(ex.getStackTrace() != null) {
+			for(StackTraceElement el : ex.getStackTrace()) {
+				log(c, Level.SEVERE, "\t| " + el.toString());
+			}
+		}
 	}
 }

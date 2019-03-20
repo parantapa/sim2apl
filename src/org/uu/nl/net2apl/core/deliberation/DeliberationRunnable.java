@@ -50,8 +50,7 @@ public final class DeliberationRunnable implements Runnable {
 				// If all deliberation steps are finished, then check whether
 				// the agent is done, so it can be killed.
 				if(this.agent.isDone()){
-					agent.getShutdownPlans().forEach( plan -> { try { agent.executePlan(plan); } catch (PlanExecutionError ex) { /*TODO?*/ } } );
-					this.platform.killAgent(this.agent.getAID()); 
+					initiateShutdown(this.agent);
 				} else {
 					if(!this.agent.checkSleeping()){ // If the agents goes to sleep then it will be woken upon any external input (message, external trigger)
 						reschedule();
@@ -62,13 +61,28 @@ public final class DeliberationRunnable implements Runnable {
 				// killed and removed from the platform. All proxy's are
 				// notified of the agent's death. The rest of the multi-
 				// agent system will continue execution by default.
-				this.platform.killAgent(this.agent.getAID()); 
-			} 
+				Platform.getLogger().log(getClass(), exception);
+				this.platform.killAgent(this.agent.getAID());
+			}
 		} else {
-			agent.getShutdownPlans().forEach( plan -> { try { agent.executePlan(plan); } catch (PlanExecutionError ex) { /*TODO?*/ } } );
-			this.platform.killAgent(this.agent.getAID()); 
+			initiateShutdown(agent);
 		}
-	}  
+	}
+
+	/** Perform shutdown plans, and kill agent **/
+	private void initiateShutdown(Agent agent) {
+		agent.getShutdownPlans().forEach(
+				plan -> {
+					try {
+						agent.executePlan(plan);
+					} catch (PlanExecutionError ex) {
+						Platform.getLogger().log(plan.getClass(), ex);
+						/*TODO?*/
+					}
+				}
+		);
+		this.platform.killAgent(agent.getAID());
+	}
 	
 	/** Returns the id of the agent to which this runnable belongs. */
 	public final AgentID getAgentID(){ return this.agent.getAID(); }
