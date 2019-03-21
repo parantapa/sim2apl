@@ -34,21 +34,21 @@ import org.uu.nl.net2apl.core.platform.PlatformNotFoundException;
  */
 public class Agent implements AgentInterface{
 	
-	 Platform platform =null;
+	private Platform platform =null;
 	
 	/** Interface that exposes the relevant parts of the agent run time data for plans. */
 	private final PlanToAgentInterface planInterface;
 	
-	 AgentID AID;
+	private AgentID AID;
 	/** The messenger client that the agent can use to send messages.  
 	 * For now the agent can only have one, later we should have multiple that talk different protocols
 	 * 
 	 * */
 	
 	/** Listeners that are notified when this agent dies. */
-	 final List<AgentDeathListener> deathListeners;
+	private final List<AgentDeathListener> deathListeners;
 	
-	 Queue<MessageInterface> messageQueue;
+	private Queue<MessageInterface> messageQueue;
 	
 	/** The messageHistory contains the history of messages send and received by the Agent
 	 * 
@@ -70,7 +70,7 @@ public class Agent implements AgentInterface{
 	// TODO: There is a sleep state in the Agent Runtime data that should be phased out and replaced by the waiting/suspend state
 	//To wait if only the agent can do it and to suspend if the AMS can also do this
 	
-	private String State=FIPAAgentState.INITIATED;
+	private FIPAAgentState State = FIPAAgentState.INITIATED;
 
 	//private AgentRuntimeData runtimeData;
 	// vvv vvv vvv
@@ -172,7 +172,7 @@ public class Agent implements AgentInterface{
         
         //this.receiveMessageMap.put(msgLog.getID(), msgLog);
        // this.receiveMessageHistory.add(msgLog);
-        if(this.getState()==FIPAAgentState.WAITING || this.getState()==FIPAAgentState.SUSPENDED) {
+        if(this.getState().equals(FIPAAgentState.WAITING) || this.getState().equals(FIPAAgentState.SUSPENDED)) {
                 this.setState(FIPAAgentState.ACTIVE);
         } else {
                 this.checkWhetherToReschedule();
@@ -208,46 +208,6 @@ public class Agent implements AgentInterface{
 		return messages;
 	}
 	
-//	private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss");
-//	
-//	/**
-//	 * Returns the Message history as a csv string to be consumed by <code>sequence.js</code>.
-//	 * 
-//	 * @return String table in CSV format
-//	 */
-//	public String getMessageHistorySequence() {
-//		
-//		final String header = "_time,senderID,senderName,receiverID,receiverName,performative,conversationID,messageID";
-//		
-//		String data = String.join("\n", this.messageContext.getMessageHistory().stream().map(messageLog -> {
-//			
-//			ACLMessage msg = (ACLMessage) messageLog.getMessage();
-//			return String.join("\n", msg.getReceiver().stream().map(receiver -> {
-//				
-//				String senderNickname = msg.getUserDefinedParameter("X-nickname");
-//
-//				
-//				//boolean agentReceivedThisMessage = receiver.getLocalName().equals(getAID().getLocalName());
-//				//System.out.println(agentReceivedThisMessage);
-//				String[] row = {
-//						messageLog.getTime().format(formatter), //time
-//						msg.getSender().getName().toString(), //senderID
-//						senderNickname == null ? msg.getSender().getNickName() : senderNickname, //senderName
-//						receiver.getName().toString(), //receiverID
-//						receiver.getNickName(), //receiverName
-//						msg.getPerformative().name(), //performative
-//						msg.getConversationId(), //conversationID
-//						messageLog.getID().toString() //messageID
-//						//agentReceivedThisMessage ? msg.getSender().getName().toString() : getAID().getName().toString() //origin
-//				};
-//				return String.join(",", row);
-//			}).collect(Collectors.toList()));
-//		}).collect(Collectors.toList()));
-//		
-//		
-//		return header + "\n" + data;
-//	}
-
 	@Override
 	public void forceStop() {
 		xForceStop(); //TODO(rbu) <- Two different forceStops, refactor!
@@ -278,13 +238,12 @@ public class Agent implements AgentInterface{
 	}
 	
 	@Override
-	public synchronized String getState() {
+	public synchronized FIPAAgentState getState() {
 			return State;
 	}
 
-	@Override
-	public synchronized void setState(String state) {
-        if (state == FIPAAgentState.ACTIVE) {
+	private synchronized void setState(FIPAAgentState state) {
+        if (state.equals(FIPAAgentState.ACTIVE)) {
                 this.checkWhetherToReschedule();
         }
         State = state;
@@ -313,7 +272,7 @@ public class Agent implements AgentInterface{
                 if(this.rescheduler == null){
                         throw new IllegalStateException("No selfrescheduler set for AgentRuntimeData");
                 }
-                if (this.State != FIPAAgentState.ACTIVE) { //true)
+                if (!this.State.equals(FIPAAgentState.ACTIVE)) { //true)
                         this.State = FIPAAgentState.ACTIVE;
                         this.rescheduler.wakeUp();
                 }
@@ -630,7 +589,7 @@ public class Agent implements AgentInterface{
 				synchronized(this.rescheduler){
 					synchronized(this.internalTriggers){
 						synchronized(this.plans){
-							if(this.State!=FIPAAgentState.ACTIVE) return true;
+							if(this.State.getShouldSleep()) return true;
 							else if(this.plans.size() == 0 &&
 							   this.externalTriggers.size() == 0 &&
 							   this.internalTriggers.size() == 0 &&
@@ -639,7 +598,7 @@ public class Agent implements AgentInterface{
 									){
 								this.State = FIPAAgentState.WAITING;
 							}
-							return this.State!=FIPAAgentState.ACTIVE; 
+							return this.State.getShouldSleep();
 						}
 					}
 				}
@@ -662,8 +621,4 @@ public class Agent implements AgentInterface{
 	public void setPlatform(Platform platform) {
 		this.platform = platform;
 	}
-	
-	
-	
-	// ^^^ ^^^ ^^^
 }
