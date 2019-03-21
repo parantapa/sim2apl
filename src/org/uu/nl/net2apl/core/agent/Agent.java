@@ -1,16 +1,5 @@
 package org.uu.nl.net2apl.core.agent;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Queue;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import org.uu.nl.net2apl.core.defaults.messenger.MessageReceiverNotFoundException;
 import org.uu.nl.net2apl.core.deliberation.DeliberationStep;
 import org.uu.nl.net2apl.core.deliberation.SelfRescheduler;
@@ -18,13 +7,14 @@ import org.uu.nl.net2apl.core.fipa.FIPAAgentState;
 import org.uu.nl.net2apl.core.fipa.MessageInterface;
 import org.uu.nl.net2apl.core.fipa.MessageLog;
 import org.uu.nl.net2apl.core.logging.MessageLogContext;
-import org.uu.nl.net2apl.core.plan.Plan;
-import org.uu.nl.net2apl.core.plan.PlanExecutionError;
-import org.uu.nl.net2apl.core.plan.PlanScheme;
-import org.uu.nl.net2apl.core.plan.PlanSchemeBase;
-import org.uu.nl.net2apl.core.plan.TriggerInterceptor;
+import org.uu.nl.net2apl.core.plan.*;
 import org.uu.nl.net2apl.core.platform.Platform;
 import org.uu.nl.net2apl.core.platform.PlatformNotFoundException;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 /**
@@ -40,41 +30,19 @@ public class Agent implements AgentInterface{
 	private final PlanToAgentInterface planInterface;
 	
 	private AgentID AID;
-	/** The messenger client that the agent can use to send messages.  
-	 * For now the agent can only have one, later we should have multiple that talk different protocols
-	 * 
-	 * */
-	
+
 	/** Listeners that are notified when this agent dies. */
 	private final List<AgentDeathListener> deathListeners;
 	
 	private Queue<MessageInterface> messageQueue;
 	
 	/** The messageHistory contains the history of messages send and received by the Agent
-	 * 
-	 * 
 	 */
-	// ConcurrentNavigableMap<ZonedDateTime,MessageInterface> messageHistory;
+	private final MessageLogContext messageContext;
 	 
-	 private final MessageLogContext messageContext;
-	 
-	 /** The sendMessageHistory contains the history of messages sent by the Agent */
-	 //SortedSet<MessageLog> sendMessageHistory;
-	 //Map<UUID, MessageLog> sendMessageMap;
-	 
-	 /** The sendMessageHistory contains the history of messages received by the Agent */
-	 //SortedSet<MessageLog> receiveMessageHistory;
-	 //Map<UUID, MessageLog> receiveMessageMap;
-	
 	// This indicates the state of the agent (The naming is FIPA complient).
-	// TODO: There is a sleep state in the Agent Runtime data that should be phased out and replaced by the waiting/suspend state
-	//To wait if only the agent can do it and to suspend if the AMS can also do this
-	
 	private FIPAAgentState State = FIPAAgentState.INITIATED;
 
-	//private AgentRuntimeData runtimeData;
-	// vvv vvv vvv
-	
 	/** The context container which contains contexts for decision making and actuation. */
 	private final ContextContainer contextContainer;
 	
@@ -82,7 +50,7 @@ public class Agent implements AgentInterface{
 	private final List<Goal> goals;
 	
 	/** The current internal and external  triggers. */
-	private List<Trigger> internalTriggers, externalTriggers;
+	private final List<Trigger> internalTriggers, externalTriggers;
 	
 	/** The current trigger interceptors. */
 	private List<TriggerInterceptor> internalTriggerInterceptors, externalTriggerInterceptors, messageInterceptors, goalInterceptors;
@@ -107,12 +75,7 @@ public class Agent implements AgentInterface{
 	
 	/** Interface to the platform that allows the agent to reschedule its own deliberation runnable. */
 	private SelfRescheduler rescheduler = null;
-	
-	// ^^^ ^^^ ^^^
-	
-//	public Agent(AgentArguments args, String nickName) throws AgentCreationFailedException {
-//		this(args);	
-//	}
+	private final Object reschedulerMutex = new Object();
 	
 	public Agent(Platform p, AgentArguments args, AgentID agentID) {
 		
@@ -131,7 +94,7 @@ public class Agent implements AgentInterface{
 		this.deliberationCycle = Collections.unmodifiableList(args.createDeliberationCycle(this));
 		this.contextInterface = new AgentContextInterface(this);
 
-		this.messageQueue = new ConcurrentLinkedQueue<MessageInterface>();
+		this.messageQueue = new ConcurrentLinkedQueue<>();
 		this.deathListeners = new ArrayList<>();
 		this.planInterface = new PlanToAgentInterface(this);
 		
@@ -166,13 +129,9 @@ public class Agent implements AgentInterface{
 	@Override
 	public synchronized void receiveMessage(MessageInterface message) {
         this.messageQueue.add(message);
-        
-        //MessageLog msgLog = new MessageLog(message);
         this.messageContext.addReceivedMessage(message);
         
-        //this.receiveMessageMap.put(msgLog.getID(), msgLog);
-       // this.receiveMessageHistory.add(msgLog);
-        if(this.getState().equals(FIPAAgentState.WAITING) || this.getState().equals(FIPAAgentState.SUSPENDED)) {
+        if(this.getState().activateOnMessage()) {
                 this.setState(FIPAAgentState.ACTIVE);
         } else {
                 this.checkWhetherToReschedule();
@@ -196,7 +155,7 @@ public class Agent implements AgentInterface{
 	}
 	
 	public synchronized List<MessageInterface> getAllMessages() {
-		List<MessageInterface> messages=new ArrayList<MessageInterface>();
+		List<MessageInterface> messages=new ArrayList<>();
 		while (!this.messageQueue.isEmpty()) {
 			messages.add(this.messageQueue.remove());
 		}
@@ -204,8 +163,7 @@ public class Agent implements AgentInterface{
 	}
 	
 	public List<MessageInterface> peekAllMessages() {
-		List<MessageInterface> messages= new ArrayList<MessageInterface>(messageQueue);
-		return messages;
+		return new ArrayList<>(messageQueue);
 	}
 	
 	@Override
@@ -267,8 +225,8 @@ public class Agent implements AgentInterface{
 	 * whether it is required to reschedule. If so (i.e. when the agent is currently 
 	 * sleeping) then the agent's runnable will be rescheduled by this method.  
 	 */
-	private final void checkWhetherToReschedule(){
-        synchronized(this.rescheduler){
+	private void checkWhetherToReschedule(){
+        synchronized(this.reschedulerMutex){
                 if(this.rescheduler == null){
                         throw new IllegalStateException("No selfrescheduler set for AgentRuntimeData");
                 }
@@ -297,15 +255,11 @@ public class Agent implements AgentInterface{
 	
 	/**
 	 * Obtain the context that belongs to a given class.
-	 * @param klass
+	 * @param klass Class type of required context
 	 * @return The context class, or <code>null</code> if not present
 	 */
 	public final <C extends Context> C getContext(final Class<C> klass) { //throws IllegalArgumentException {
-		C context = this.contextContainer.getContext(klass);
-		//if(context == null) { // Context with that type unknown. This should not occur.
-			//throw new IllegalArgumentException("Trying to obtain a context with class "+klass+" which doesn't exist.");
-		//}
-		return context;
+		return this.contextContainer.getContext(klass);
 	}
 	
 	public final void addContext(final Context context) {
@@ -420,8 +374,8 @@ public class Agent implements AgentInterface{
 	public final List<Trigger> getAndRemoveInternalTriggers(){
 		if(this.internalTriggers.isEmpty()) return Collections.emptyList();
 		else {
-			List<Trigger> snapshot = this.internalTriggers;
-			this.internalTriggers = new ArrayList<>();
+			List<Trigger> snapshot = new ArrayList<>(this.internalTriggers);
+			this.internalTriggers.clear();
 			return snapshot;
 		}
 	}
@@ -586,7 +540,7 @@ public class Agent implements AgentInterface{
 	 */
 	public final boolean checkSleeping(){
 		synchronized (this.externalTriggers) {
-				synchronized(this.rescheduler){
+				synchronized(this.reschedulerMutex){ // Why synchronized on the rescheduler anyway?
 					synchronized(this.internalTriggers){
 						synchronized(this.plans){
 							if(this.State.getShouldSleep()) return true;
