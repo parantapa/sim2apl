@@ -233,6 +233,7 @@ public class Agent implements AgentInterface{
                 if (!this.State.equals(FIPAAgentState.ACTIVE)) { //true)
                         this.State = FIPAAgentState.ACTIVE;
                         this.rescheduler.wakeUp();
+                        Platform.getLogger().log(Agent.class, "Agent " + getAID().toString() + " woken up");
                 }
         }
     }

@@ -50,11 +50,14 @@ public final class DeliberationRunnable implements Runnable {
 				// If all deliberation steps are finished, then check whether
 				// the agent is done, so it can be killed.
 				if(this.agent.isDone()){
+					Platform.getLogger().log(DeliberationRunnable.class, "Agent " + agent.toString() + " is done and will be shut down");
 					initiateShutdown(this.agent);
 				} else {
 					if(!this.agent.checkSleeping()){ // If the agents goes to sleep then it will be woken upon any external input (message, external trigger)
 						reschedule();
-					}  
+					} else {
+						Platform.getLogger().log(DeliberationRunnable.class, "Agent " + agent.toString() + " going to sleep");
+					}
 				}
 			} catch(DeliberationStepException exception){ 
 				// Deliberation exceptions should not occur. The agent is 
