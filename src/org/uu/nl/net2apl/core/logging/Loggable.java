@@ -32,11 +32,21 @@ public abstract class Loggable {
 	 * @param ex The exception to log
 	 */
 	public void log(Class<?> c, Exception ex) {
+		log(c, Level.SEVERE, ex);
+	}
+
+	/**
+	 * Shorthand method for logging an exception with a custom severity level.
+	 * @param c The class that generated the message
+	 * @param level Severity of exception
+	 * @param ex The exception to log
+	 */
+	public void log(Class<?> c, Level level, Exception ex) {
 		String msg = ex.getMessage() == null ? "<No Message>" : ex.getMessage();
-		log(c, Level.SEVERE, msg);
+		log(c, level, msg);
 		if(ex.getStackTrace() != null) {
 			for(StackTraceElement el : ex.getStackTrace()) {
-				log(c, Level.SEVERE, "\t| " + el.toString());
+				log(c, level, "\t| " + el.toString());
 			}
 		}
 	}
