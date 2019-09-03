@@ -50,13 +50,16 @@ public final class DeliberationRunnable implements Runnable {
 				// If all deliberation steps are finished, then check whether
 				// the agent is done, so it can be killed.
 				if(this.agent.isDone()){
-					Platform.getLogger().log(DeliberationRunnable.class, "Agent " + agent.toString() + " is done and will be shut down");
+					Platform.getLogger().log(DeliberationRunnable.class, String.format(
+							"Agent %s is done and will be shut down",
+							agent.getAID().getUuID()));
 					initiateShutdown(this.agent);
 				} else {
-					if(!this.agent.checkSleeping()){ // If the agents goes to sleep then it will be woken upon any external input (message, external trigger)
+					if (!this.agent.checkSleeping()) { // If the agents goes to sleep then it will be woken upon any external input (message, external trigger)
 						reschedule();
 					} else {
-						Platform.getLogger().log(DeliberationRunnable.class, "Agent " + agent.toString() + " going to sleep");
+						Platform.getLogger().log(DeliberationRunnable.class, String.format("Agent %s going to sleep",
+								agent.getAID().getUuID()));
 					}
 				}
 			} catch(DeliberationStepException exception){ 
@@ -91,7 +94,7 @@ public final class DeliberationRunnable implements Runnable {
 	public final AgentID getAgentID(){ return this.agent.getAID(); }
 	
 	/** Reschedule this deliberation runnable so it will be executed again in the future. */
-	public final void reschedule(){
+	public final synchronized void reschedule(){
 		this.platform.scheduleForExecution(this);
 	} 
 }

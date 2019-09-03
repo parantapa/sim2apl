@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -75,7 +76,7 @@ public class Agent implements AgentInterface{
 	
 	/** Interface to the platform that allows the agent to reschedule its own deliberation runnable. */
 	private SelfRescheduler rescheduler = null;
-	private final Object reschedulerMutex = new Object();
+	private final ReentrantLock reschedulerMutex = new ReentrantLock();
 	
 	public Agent(Platform p, AgentArguments args, AgentID agentID) {
 		
@@ -226,16 +227,19 @@ public class Agent implements AgentInterface{
 	 * sleeping) then the agent's runnable will be rescheduled by this method.  
 	 */
 	private void checkWhetherToReschedule(){
-        synchronized(this.reschedulerMutex){
+        try {
+        	this.reschedulerMutex.lock();
                 if(this.rescheduler == null){
                         throw new IllegalStateException("No selfrescheduler set for AgentRuntimeData");
                 }
                 if (!this.State.equals(FIPAAgentState.ACTIVE)) { //true)
                         this.State = FIPAAgentState.ACTIVE;
                         this.rescheduler.wakeUp();
-                        Platform.getLogger().log(Agent.class, "Agent " + getAID().toString() + " woken up");
+                        Platform.getLogger().log(Agent.class, "Agent " + getAID().getUuID() + " woken up");
                 }
-        }
+        } finally {
+        	this.reschedulerMutex.unlock();
+		}
     }
 		
 	//////////////////////////////////////////
@@ -280,15 +284,19 @@ public class Agent implements AgentInterface{
 	
 	/** Remove the provided goal from the list of current goals. */
 	public final void dropGoal(final Goal goal){
-		this.goals.remove(goal);
+	    synchronized (this.goals) {
+            this.goals.remove(goal);
+        }
 	}
 	
 	/** Add a goal to the list of current goals. Will check whether the list of 
 	 * current goals already contains the provided goal. */
 	public final void adoptGoal(final Goal goal){
-		if(!hasGoal(goal)){
-			this.goals.add(goal);
-		}
+	    synchronized (this.goals) {
+            if (!hasGoal(goal)) {
+                this.goals.add(goal);
+            }
+        }
 	}
 
 	/** Add a plan to the list of current plans. This plan will be executed during
@@ -385,19 +393,23 @@ public class Agent implements AgentInterface{
 	/** Obtain new list that contains the current goals. Manipulating the returned list 
 	 * will not add/remove goals to the agent. The goals itself though are not cloned. */
 	public final List<Goal> getGoals(){
-		if(this.goals.isEmpty()) return Collections.emptyList();
-		else return new ArrayList<>(this.goals);
+		synchronized (this.goals) {
+			if (this.goals.isEmpty()) return Collections.emptyList();
+			else return new ArrayList<>(this.goals);
+		}
 	}
 	
 	/** Remove all goals that are achieved given the contexts of the agent. */
-	public final void clearAchievedGoals(){  
-		if(!this.goals.isEmpty()){
-			List<Goal> snapshot = new ArrayList<>(this.goals);
-			for(Goal goal : snapshot){
-				if(goal.isAchieved(this.contextInterface)){ 
-					this.goals.remove(goal);
+	public final void clearAchievedGoals(){
+		synchronized (this.goals) {
+			if (!this.goals.isEmpty()) {
+				List<Goal> snapshot = new ArrayList<>(this.goals);
+				for (Goal goal : snapshot) {
+					if (goal != null && goal.isAchieved(this.contextInterface)) {
+						this.goals.remove(goal);
+					}
 				}
-			} 
+			}
 		}
 	}
 	
@@ -529,7 +541,13 @@ public class Agent implements AgentInterface{
 	}
 	
 	public final void setSelfRescheduler(final SelfRescheduler rescheduler){
-		this.rescheduler = rescheduler; 
+		try {
+			this.reschedulerMutex.lock();
+			this.rescheduler = rescheduler;
+		} finally {
+			this.reschedulerMutex.unlock();
+		}
+
 	}
 	
 	/**
@@ -540,24 +558,29 @@ public class Agent implements AgentInterface{
 	 * 
 	 */
 	public final boolean checkSleeping(){
-		synchronized (this.externalTriggers) {
-				synchronized(this.reschedulerMutex){ // Why synchronized on the rescheduler anyway?
-					synchronized(this.internalTriggers){
-						synchronized(this.plans){
-							if(this.State.getShouldSleep()) return true;
-							else if(this.plans.size() == 0 &&
-							   this.externalTriggers.size() == 0 &&
-							   this.internalTriggers.size() == 0 &&
-							   this.goals.size() == 0 &&
-							   this.messageQueue.peek()==null
-									){
+		try {
+			this.reschedulerMutex.lock();
+			synchronized (this.externalTriggers) {
+				synchronized(this.internalTriggers){
+					synchronized (this.goals) {
+						synchronized (this.plans) {
+							if (this.State.getShouldSleep()) return true;
+							else if (this.plans.size() == 0 &&
+									this.externalTriggers.size() == 0 &&
+									this.internalTriggers.size() == 0 &&
+									this.goals.size() == 0 &&
+									this.messageQueue.peek() == null
+							) {
 								this.State = FIPAAgentState.WAITING;
 							}
 							return this.State.getShouldSleep();
 						}
 					}
 				}
-		} 
+			}
+		} finally {
+			this.reschedulerMutex.unlock();
+		}
 	}
 	 
 	

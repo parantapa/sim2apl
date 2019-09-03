@@ -1,31 +1,23 @@
 package org.uu.nl.net2apl.core.platform;
 
-import java.net.InetAddress;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.uu.nl.net2apl.core.agent.Agent;
 import org.uu.nl.net2apl.core.agent.AgentCreationFailedException;
 import org.uu.nl.net2apl.core.agent.AgentID;
 import org.uu.nl.net2apl.core.agent.AgentKillSwitch;
 import org.uu.nl.net2apl.core.defaults.messenger.DefaultMessenger;
 import org.uu.nl.net2apl.core.deliberation.DeliberationRunnable;
-import org.uu.nl.net2apl.core.fipa.MessageLog;
 import org.uu.nl.net2apl.core.fipa.ams.DirectoryFacilitator;
 import org.uu.nl.net2apl.core.logging.ConsoleLogger;
 import org.uu.nl.net2apl.core.logging.Loggable;
-import org.uu.nl.net2apl.core.logging.MessageLogContext;
 import org.uu.nl.net2apl.core.messaging.Messenger;
+
+import java.net.InetAddress;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * A Platform is a container that maintains the available thread pool, agent factories, 
@@ -85,7 +77,7 @@ public final class Platform {
 	 * @param messenger Messenger that agents will use to communicate.
 	 */
 	private Platform(final int nrOfExecutionThreads, final Messenger<?> messenger){
-		this.threadPool = Executors.newFixedThreadPool(nrOfExecutionThreads); 
+		this.threadPool = Executors.newFixedThreadPool(nrOfExecutionThreads);
 		this.messenger = messenger;
 		this.agentKillSwitches = new HashMap<>(); 
 		this.registeredAgents=new HashMap<>();
@@ -263,6 +255,11 @@ public final class Platform {
 		synchronized(this.threadPool){
 			if(!this.threadPool.isShutdown()){
 				scheduled = true;
+				ThreadPoolExecutor exec = (ThreadPoolExecutor) this.threadPool;
+				if(exec.getQueue().contains(deliberationRunnable)) {
+					// TODO: Dirty hack, but don't reschedule already scheduled runnable( instance)s to avoid grid lock
+					return;
+				}
 				this.threadPool.execute(deliberationRunnable);
 			}
 		}

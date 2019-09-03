@@ -37,10 +37,6 @@ public final class ExecutePlans extends DefaultDeliberationStep {
 				} catch(Exception e) {
 					c = getClass();
 				}
-				Platform.getLogger().log(c, String.format(
-						"Error during exeuction of plan %s. IMPORTANT: If this plan is associated with a goal, the plan will NOT BE READOPTED and needs a recovery plan",
-						plan.getClass().toString()));
-				Platform.getLogger().log(c, executionError);
 
 				super.agent.removePlan(plan); // Remove plan from execution
 				super.agent.addInternalTrigger(executionError); // Add the error
