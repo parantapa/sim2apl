@@ -15,7 +15,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -76,8 +75,7 @@ public class Agent implements AgentInterface{
 	
 	/** Interface to the platform that allows the agent to reschedule its own deliberation runnable. */
 	private SelfRescheduler rescheduler = null;
-	private final ReentrantLock reschedulerMutex = new ReentrantLock();
-	
+
 	public Agent(Platform p, AgentArguments args, AgentID agentID) {
 		
 		this.AID = agentID;
@@ -124,19 +122,21 @@ public class Agent implements AgentInterface{
 		return this.AID.getName();
 	}
 
-	
+	/**
+	 * Invokes the agent, meaning the agent is lifted from its INITIATED state to the ACTIVE state, according to
+	 * FIPA standards: http://www.fipa.org/specs/fipa00023/SC00023J.html#_Ref449500188
+	 */
+	public void invoke() {
+		this.State = FIPAAgentState.ACTIVE;
+	}
+
 	//An agent receives a message using this function. 
 	//The assumption here is that if the agent is in waiting or suspended it will change states to active to receive the message
 	@Override
 	public synchronized void receiveMessage(MessageInterface message) {
-        this.messageQueue.add(message);
-        this.messageContext.addReceivedMessage(message);
-        
-        if(this.getState().activateOnMessage()) {
-                this.setState(FIPAAgentState.ACTIVE);
-        } else {
-                this.checkWhetherToReschedule();
-        }
+		this.messageQueue.add(message);
+		this.messageContext.addReceivedMessage(message);
+		this.checkWhetherToReschedule();
     }
 	
 	@SuppressWarnings("unchecked")
@@ -196,18 +196,6 @@ public class Agent implements AgentInterface{
 		}
 	}
 	
-	@Override
-	public synchronized FIPAAgentState getState() {
-			return State;
-	}
-
-	private synchronized void setState(FIPAAgentState state) {
-        if (state.equals(FIPAAgentState.ACTIVE)) {
-                this.checkWhetherToReschedule();
-        }
-        State = state;
-    }
-	
 	/**
 	 * Execute a given plan. This method will first check whether the plan has a goal 
 	 * and if so, whether that goal is still relevant. In case the plan has a goal and the 
@@ -227,18 +215,13 @@ public class Agent implements AgentInterface{
 	 * sleeping) then the agent's runnable will be rescheduled by this method.  
 	 */
 	private void checkWhetherToReschedule(){
-        try {
-        	this.reschedulerMutex.lock();
-                if(this.rescheduler == null){
-                        throw new IllegalStateException("No selfrescheduler set for AgentRuntimeData");
-                }
-                if (!this.State.equals(FIPAAgentState.ACTIVE)) { //true)
-                        this.State = FIPAAgentState.ACTIVE;
-                        this.rescheduler.wakeUp();
-                        Platform.getLogger().log(Agent.class, "Agent " + getAID().getUuID() + " woken up");
-                }
-        } finally {
-        	this.reschedulerMutex.unlock();
+		if(this.rescheduler == null){
+				throw new IllegalStateException("No selfrescheduler set for AgentRuntimeData");
+		}
+		if (!this.State.isActive()) {
+				this.State = FIPAAgentState.ACTIVE;
+				this.rescheduler.wakeUp();
+				Platform.getLogger().log(Agent.class, "Agent " + getAID().getName() + " woken up");
 		}
     }
 		
@@ -541,13 +524,7 @@ public class Agent implements AgentInterface{
 	}
 	
 	public final void setSelfRescheduler(final SelfRescheduler rescheduler){
-		try {
-			this.reschedulerMutex.lock();
-			this.rescheduler = rescheduler;
-		} finally {
-			this.reschedulerMutex.unlock();
-		}
-
+		this.rescheduler = rescheduler;
 	}
 	
 	/**
@@ -558,28 +535,23 @@ public class Agent implements AgentInterface{
 	 * 
 	 */
 	public final boolean checkSleeping(){
-		try {
-			this.reschedulerMutex.lock();
-			synchronized (this.externalTriggers) {
-				synchronized(this.internalTriggers){
-					synchronized (this.goals) {
-						synchronized (this.plans) {
-							if (this.State.getShouldSleep()) return true;
-							else if (this.plans.size() == 0 &&
-									this.externalTriggers.size() == 0 &&
-									this.internalTriggers.size() == 0 &&
-									this.goals.size() == 0 &&
-									this.messageQueue.peek() == null
-							) {
-								this.State = FIPAAgentState.WAITING;
-							}
-							return this.State.getShouldSleep();
+		synchronized (this.externalTriggers) {
+			synchronized(this.internalTriggers){
+				synchronized (this.goals) {
+					synchronized (this.plans) {
+						if (!this.State.isActive()) return true;
+						else if (this.plans.size() == 0 &&
+								this.externalTriggers.size() == 0 &&
+								this.internalTriggers.size() == 0 &&
+								this.goals.size() == 0 &&
+								this.messageQueue.peek() == null
+						) {
+							this.State = FIPAAgentState.WAITING;
 						}
+						return !this.State.isActive();
 					}
 				}
 			}
-		} finally {
-			this.reschedulerMutex.unlock();
 		}
 	}
 	 

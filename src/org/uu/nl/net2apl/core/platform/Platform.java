@@ -17,7 +17,6 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * A Platform is a container that maintains the available thread pool, agent factories, 
@@ -159,6 +158,7 @@ public final class Platform {
 		//Add to platform's messenger
 		this.messenger.register(agent);
 		scheduleForExecution(deliberationRunnable);
+		agent.invoke();
 	}
 	
 	public synchronized void deregister(Agent agent) {
@@ -255,11 +255,6 @@ public final class Platform {
 		synchronized(this.threadPool){
 			if(!this.threadPool.isShutdown()){
 				scheduled = true;
-				ThreadPoolExecutor exec = (ThreadPoolExecutor) this.threadPool;
-				if(exec.getQueue().contains(deliberationRunnable)) {
-					// TODO: Dirty hack, but don't reschedule already scheduled runnable( instance)s to avoid grid lock
-					return;
-				}
 				this.threadPool.execute(deliberationRunnable);
 			}
 		}

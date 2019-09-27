@@ -12,7 +12,7 @@ public enum FIPAAgentState {
 
      When the agent is created or installed, it is put in <code>INITIATED</code> state.
      */
-    INITIATED(false, false),
+    INITIATED(true),
 
     /**
      String constant for the <code>active</code> agent life-cycle
@@ -20,7 +20,7 @@ public enum FIPAAgentState {
 
      This state means the deliberation cycle of the agent should continue.
      */
-    ACTIVE(false, false),
+    ACTIVE(true),
 
     /**
      String constant for the <code>suspended</code> agent life-cycle
@@ -30,7 +30,7 @@ public enum FIPAAgentState {
      initiated by the agent itself, or by the Agent Messaging Service (AMS). From this state, the agent can be brought
      back in the <code>ACTIVE</code> state with the <code>RESUME</code> action, which can only be initiated by the AMS.
      */
-    SUSPENDED(true, true),
+    SUSPENDED(false),
 
     /**
      String constant for the <code>waiting</code> agent life-cycle
@@ -39,7 +39,7 @@ public enum FIPAAgentState {
      This can only be initiated by an agent. The agent can be brought back in the active state with the
      <code>WAKE UP</code> action, which also can only be Agent itself.
      */
-    WAITING(true, true),
+    WAITING(false),
 
     /**
      String constant for the <code>transit</code> agent life-cycle
@@ -50,31 +50,15 @@ public enum FIPAAgentState {
      action. In this state, no deliberation can take place. The agent can be brought back to the <code>ACTIVE</code>
      state through the <code>EXECUTE</code> action. Both actions can be executed only by the agent.
      */
-    TRANSIT(true, false);
+    TRANSIT(false);
 
-	FIPAAgentState(boolean sleep, boolean activateOnMessage) {
-	    this.sleep = sleep;
-	    this.activateOnMessage = activateOnMessage;
+    private boolean active;
+
+    FIPAAgentState(boolean active) {
+        this.active = active;
     }
 
-    private boolean sleep;
-	private boolean activateOnMessage;
-
-    /**
-     * Get whether this state should suspend all operation of the agent
-     * @return True iff all operation of the agent should be suspended in this state until further notice
-     */
-	public boolean getShouldSleep() {
-	    return this.sleep;
+	public boolean isActive() {
+	    return this.active;
     }
-
-    /**
-     * If the agent receives a message, should the agent be brought back into the <code>ACTIVE</code> state from this
-     * state? I.e. can the AMS move the agent from this state to the <code>ACTIVE</code> state?
-     * @return True iff agent should be brought into active state
-     */
-    public boolean activateOnMessage() {
-	    return this.activateOnMessage;
-    }
-
 }
