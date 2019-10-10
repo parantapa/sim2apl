@@ -29,7 +29,7 @@ public final class EnhancedTriggerInterceptorBuilder {
 		this.forceRunOnce = false;
 		this.plan = new DecoupledPlan() { 
 			@Override
-			public void execute(Trigger trigger, PlanToAgentInterface planInterface) throws PlanExecutionError {setFinished(true);}
+			public Object execute(Trigger trigger, PlanToAgentInterface planInterface) throws PlanExecutionError {setFinished(true); return null; }
 		};
 	} 
 	
@@ -61,8 +61,8 @@ public final class EnhancedTriggerInterceptorBuilder {
 	public final EnhancedTriggerInterceptor build(){
 		DecoupledPlan chosenPlan;
 		if(this.forceRunOnce){ // Force that the plan is one-shot
-			DecoupledPlanBodyInterface<Trigger> body = (Trigger trigger, PlanToAgentInterface planInterface) -> {this.plan.execute(trigger, planInterface);};
-			chosenPlan = new InstantiableRunOnceDecoupledPlan<Trigger>(body);
+			DecoupledPlanBodyInterface<Trigger> body = (Trigger trigger, PlanToAgentInterface planInterface) -> this.plan.execute(trigger, planInterface);
+			chosenPlan = new InstantiableRunOnceDecoupledPlan<>(body);
 		} else chosenPlan = this.plan;
 		EnhancedTriggerInterceptor interceptor = new EnhancedTriggerInterceptor(this.consuming, this.selector, chosenPlan); 
 		return interceptor;

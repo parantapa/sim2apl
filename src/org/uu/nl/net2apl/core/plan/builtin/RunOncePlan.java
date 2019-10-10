@@ -12,10 +12,11 @@ import org.uu.nl.net2apl.core.plan.PlanExecutionError;
 public abstract class RunOncePlan extends Plan {
  
 	@Override
-	public final void execute(final PlanToAgentInterface planInterface) throws PlanExecutionError {
-		executeOnce(planInterface);
+	public final Object execute(final PlanToAgentInterface planInterface) throws PlanExecutionError {
+		Object planAction = executeOnce(planInterface);
 		setFinished(true);
+		return planAction;
 	}
 	
-	public abstract void executeOnce(final PlanToAgentInterface planInterface) throws PlanExecutionError; 
+	public abstract Object executeOnce(final PlanToAgentInterface planInterface) throws PlanExecutionError;
 }

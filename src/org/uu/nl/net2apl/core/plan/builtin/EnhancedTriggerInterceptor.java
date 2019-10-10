@@ -99,7 +99,7 @@ public final class EnhancedTriggerInterceptor extends TriggerInterceptor {
 		}
 		
 		@Override
-		public final void execute(final PlanToAgentInterface planInterface) throws PlanExecutionError { 
+		public final Object execute(final PlanToAgentInterface planInterface) throws PlanExecutionError {
 			// Only execute the removal of other interceptors the first time that this plan is executed
 			if(this.firstExecute){
 				for(TriggerInterceptor interceptor : this.goalInterceptorsToRemove)
@@ -113,9 +113,9 @@ public final class EnhancedTriggerInterceptor extends TriggerInterceptor {
 				this.firstExecute = false;
 			}
 			// Then proceed as if this plan is the provided plan when this interceptor was created
-			this.plan.execute(this.trigger, planInterface);
+			Object planAction = this.plan.execute(this.trigger, planInterface);
 			setFinished(this.plan.isFinished());
+			return planAction;
 		}
-		
 	}
 }

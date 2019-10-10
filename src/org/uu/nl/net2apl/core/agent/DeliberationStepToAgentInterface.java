@@ -93,7 +93,7 @@ public final class DeliberationStepToAgentInterface {
 	 * goal is not relevant anymore (because it is not in the list of current goals anymore) 
 	 * then the plan will not be executed.
 	 */
-	public final void executePlan(final Plan plan) throws PlanExecutionError {
-		this.agent.executePlan(plan);
+	public final Object executePlan(final Plan plan) throws PlanExecutionError {
+		return this.agent.executePlan(plan);
 	}  
 }

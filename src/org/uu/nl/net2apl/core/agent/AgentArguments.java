@@ -9,6 +9,7 @@ import org.uu.nl.net2apl.core.defaults.deliberationsteps.ApplyGoalPlanSchemes;
 import org.uu.nl.net2apl.core.defaults.deliberationsteps.ApplyInternalTriggerPlanSchemes;
 import org.uu.nl.net2apl.core.defaults.deliberationsteps.ApplyMessagePlanSchemes;
 import org.uu.nl.net2apl.core.defaults.deliberationsteps.ExecutePlans;
+import org.uu.nl.net2apl.core.deliberation.DeliberationActionStep;
 import org.uu.nl.net2apl.core.deliberation.DeliberationStep;
 import org.uu.nl.net2apl.core.plan.Plan;
 import org.uu.nl.net2apl.core.plan.PlanScheme;
@@ -51,18 +52,32 @@ public class AgentArguments {
 		return container;
 	}
 	
-	/** Produce the deliberation cycle of the agent. The provided interface can be used by deliberation steps to perform their functionalities on the agent. 
-	 * The default implementation is that the 2APL deliberation cycle is used: ApplyGoalPlanSchemes -> ApplyExternalTriggerPlanSchemes -> 
-	 *  ApplyInternalTriggerPlanSchemes -> ApplyMessagePlanSchemes -> ExecutePlans. */
-	final List<DeliberationStep> createDeliberationCycle(final Agent agent){
+	/** Produce the sense and reason parts of the deliberation cycle of the agent.
+	 * The provided interface can be used by deliberation steps to perform their functionalities on the agent.
+	 * The default implementation is that the 2APL deliberation cycle is used:
+	 * ApplyGoalPlanSchemes -> ApplyExternalTriggerPlanSchemes ->
+	 *  ApplyInternalTriggerPlanSchemes -> ApplyMessagePlanSchemes -> ExecutePlans.
+	 *  For Sim2APL, the ExecutePlans step is moved to the act Cycle*/
+	final List<DeliberationStep> createSenseReasonCycle(final Agent agent){
 		// Produces the default 2APL deliberation cycle.
-		List<DeliberationStep> deliberationCycle = new ArrayList<>();
-		deliberationCycle.add(new ApplyGoalPlanSchemes(agent));
-		deliberationCycle.add(new ApplyExternalTriggerPlanSchemes(agent));
-		deliberationCycle.add(new ApplyInternalTriggerPlanSchemes(agent));
-		deliberationCycle.add(new ApplyMessagePlanSchemes(agent));
-		deliberationCycle.add(new ExecutePlans(agent));
-		return deliberationCycle;
+		List<DeliberationStep> senseReasonCycle = new ArrayList<>();
+		senseReasonCycle.add(new ApplyGoalPlanSchemes(agent));
+		senseReasonCycle.add(new ApplyExternalTriggerPlanSchemes(agent));
+		senseReasonCycle.add(new ApplyInternalTriggerPlanSchemes(agent));
+		senseReasonCycle.add(new ApplyMessagePlanSchemes(agent));
+		return senseReasonCycle;
+	}
+
+	/**
+	 * Produce the act parts of the deliberation cycle of the agent. This cycle produces actions, which is why
+	 * it is decoupled from the rest of the deliberation cycle
+	 * @param agent
+	 * @return
+	 */
+	final List<DeliberationActionStep> createActCycle(final Agent agent) {
+		List<DeliberationActionStep> actCycle = new ArrayList<>();
+		actCycle.add(new ExecutePlans(agent));
+		return actCycle;
 	}
 	
 	/** Returns a list of plans that will be executed upon the agent's first deliberation cycle. */

@@ -72,10 +72,10 @@ public abstract class Plan {
 	 * @param planInterface
 	 * @throws PlanExecutionError If you throw this error than it will be automatically adopted as an internal trigger.
 	 */
-	public abstract void execute(final PlanToAgentInterface planInterface) throws PlanExecutionError;
+	public abstract Object execute(final PlanToAgentInterface planInterface) throws PlanExecutionError;
 	
 
 	/** Token to indicate that an instantiate method for a plan was not fired by a trigger.*/
 	public static final Plan UNINSTANTIATED = new Plan(){ @Override
-	public final void execute(final PlanToAgentInterface planInterface) throws PlanExecutionError {}}; 
+	public final Object execute(final PlanToAgentInterface planInterface) throws PlanExecutionError {return null;}};
 }

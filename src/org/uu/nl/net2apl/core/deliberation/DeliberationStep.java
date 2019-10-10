@@ -9,5 +9,5 @@ public interface DeliberationStep {
 	 * each implement a single step from the 2APL deliberation cycle. This way
 	 * an agent component factory can decide at runtime which deliberation steps 
 	 * should be part of an agents' deliberation cycle.  */ 
-	public void execute() throws DeliberationStepException;
+	void execute() throws DeliberationStepException;
 }

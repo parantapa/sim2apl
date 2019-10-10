@@ -1,33 +1,40 @@
 package org.uu.nl.net2apl.core.defaults.deliberationsteps;
- 
+
 
 import org.uu.nl.net2apl.core.agent.Agent;
+import org.uu.nl.net2apl.core.deliberation.DeliberationActionStep;
 import org.uu.nl.net2apl.core.deliberation.DeliberationStepException;
 import org.uu.nl.net2apl.core.plan.Plan;
 import org.uu.nl.net2apl.core.plan.PlanExecutionError;
-import org.uu.nl.net2apl.core.platform.Platform;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Deliberation step for executing the current plans of the agent.
  * @author Bas Testerink
  */
-public final class ExecutePlans extends DefaultDeliberationStep { 
-	
+public final class ExecutePlans implements DeliberationActionStep {
+	private final Agent agent;
+
 	public  ExecutePlans(final Agent agent){
-		super(agent);
+		this.agent = agent;
 	}
 	
 	/** This steps executes by going through each of the agent's plans. If the plan is finished 
 	 * after its execution, then it is removed. If an error occurs, then a plan execution error
 	 * will be inserted as an internal trigger. */
 	@Override
-	public final void execute() throws DeliberationStepException {
-		for(Plan plan : super.agent.getPlans()){ 
+	public final List<Object> execute() throws DeliberationStepException {
+		ArrayList<Object> producedActionList = new ArrayList<>();
+		for(Plan plan : this.agent.getPlans()){
 			try {
-				super.agent.executePlan(plan);
+				Object planAction = this.agent.executePlan(plan);
+				if(planAction != null)
+					producedActionList.add(planAction);
 				if(plan.isFinished())
-					super.agent.removePlan(plan);
-			} catch(PlanExecutionError executionError){ 
+					this.agent.removePlan(plan);
+			} catch(PlanExecutionError executionError){
 				// NOTE: if a plan has an execution error, and a goal is being pursued by the plan, then the goal still is 
 				// flagged as being pursued. Therefore it is important to ALWAYS have repair plan schemes for failed goal plan schemes.
 
@@ -38,9 +45,10 @@ public final class ExecutePlans extends DefaultDeliberationStep {
 					c = getClass();
 				}
 
-				super.agent.removePlan(plan); // Remove plan from execution
-				super.agent.addInternalTrigger(executionError); // Add the error
+				this.agent.removePlan(plan); // Remove plan from execution
+				this.agent.addInternalTrigger(executionError); // Add the error
 			}
 		}
+		return producedActionList;
 	}
 }

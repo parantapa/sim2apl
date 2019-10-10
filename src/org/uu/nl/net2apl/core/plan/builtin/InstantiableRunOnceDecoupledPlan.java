@@ -18,12 +18,13 @@ public final class InstantiableRunOnceDecoupledPlan<T extends Trigger> extends D
 	}
 	
 	@Override
-	public final void execute(final Trigger trigger, final PlanToAgentInterface planInterface) throws PlanExecutionError {
+	public final Object execute(final Trigger trigger, final PlanToAgentInterface planInterface) throws PlanExecutionError {
 		try {
 			@SuppressWarnings("unchecked")
 			T cast = (T) trigger;  
-			this.body.execute(cast, planInterface);
+			Object planAction = this.body.execute(cast, planInterface);
 			this.setFinished(true);
+			return planAction;
 		} catch(ClassCastException e){
 			e.printStackTrace();
 			throw new PlanExecutionError(); // TODO: design and implement a proper plan execution error that hints that the selector should ensure the correct type

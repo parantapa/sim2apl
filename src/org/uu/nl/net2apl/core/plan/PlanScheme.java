@@ -18,5 +18,5 @@ public interface PlanScheme {
 	 * @param contextInterface An interface to obtain the context of the agent.
 	 * @return Plan.uninstantiated() iff the plan scheme is not relevant and applicable, otherwise the plan to be scheduled for execution in the current deliberation cycle.
 	 */
-	public Plan instantiate(final Trigger trigger, final AgentContextInterface contextInterface);
+	Plan instantiate(final Trigger trigger, final AgentContextInterface contextInterface);
 }

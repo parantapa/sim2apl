@@ -13,5 +13,5 @@ import org.uu.nl.net2apl.core.plan.PlanExecutionError;
  */
 public interface DecoupledPlanBodyInterface <T> {
 	/** Implement this function in order to specify how an interceptor must process a given trigger. */
-	public void execute(final T trigger, final PlanToAgentInterface planInterface) throws PlanExecutionError;
+	public Object execute(final T trigger, final PlanToAgentInterface planInterface) throws PlanExecutionError;
 }

@@ -23,9 +23,9 @@ public final class FunctionalPlanScheme implements PlanScheme {
 		if(plan == SubPlanInterface.UNINSTANTIATED) return Plan.UNINSTANTIATED;
 		else return new RunOncePlan() {
 			@Override
-			public final void executeOnce(final PlanToAgentInterface planInterface)
+			public final Object executeOnce(final PlanToAgentInterface planInterface)
 					throws PlanExecutionError {
-				plan.execute(planInterface);
+				return plan.execute(planInterface);
 			}
 		};
 	}

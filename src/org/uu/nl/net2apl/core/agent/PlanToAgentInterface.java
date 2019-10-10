@@ -134,7 +134,11 @@ public final class PlanToAgentInterface {
 	 * this method is called. One can use the returned interceptor to for instance make it mutually exclusive with other interceptors.
 	 */
 	public final <T extends Trigger> EnhancedTriggerInterceptor waitForExternalTrigger(final Predicate<Trigger> selector, final DecoupledPlanBodyInterface<T> plan){
-		EnhancedTriggerInterceptor interceptor =  (new EnhancedTriggerInterceptorBuilder()).setSelector(selector).setConsuming(true).setForceRunOnce(true).setPlan(new InstantiableRunOnceDecoupledPlan<T>(plan)).build();
+		EnhancedTriggerInterceptor interceptor =
+				(new EnhancedTriggerInterceptorBuilder())
+				.setSelector(selector)
+				.setConsuming(true).setForceRunOnce(true).setPlan(
+				new InstantiableRunOnceDecoupledPlan<>(plan)).build();
 		adoptExternalTriggerInterceptor(interceptor);
 		return interceptor; 
 	}
@@ -209,7 +213,8 @@ public final class PlanToAgentInterface {
 				.setForceRunOnce(true)
 				.setSelector(condition)
 				// The plan is to simply adopt the goal again
-				.setPlan(new InstantiableRunOnceDecoupledPlan<Trigger>((Trigger trigger, PlanToAgentInterface planInt) -> {planInt.adoptGoal(goal);}))
+				.setPlan(new InstantiableRunOnceDecoupledPlan<Trigger>(
+						(Trigger trigger, PlanToAgentInterface planInt) -> {planInt.adoptGoal(goal); return null;}))
 				.build();
 		
 		// Add the interceptor to the agent
@@ -225,17 +230,19 @@ public final class PlanToAgentInterface {
 	/** Implements a while loop that possibly lasts over several deliberation cycles. The provide plan will be rescheduled for the next cycle as long as the 
 	 * condition holds. The condition is immediately checked and the plan possibly executed upon the call of this method. Note that code which comes after this 
 	 * method call will be executed immediately, regardless of whether the condition holds or not.	 */
-	public final void repeatWhile(final Predicate<PlanToAgentInterface> condition, final SubPlanInterface plan) throws PlanExecutionError{
+	public final Object repeatWhile(final Predicate<PlanToAgentInterface> condition, final SubPlanInterface plan) throws PlanExecutionError{
+		Object lastIntendedAction = null;
 		if(condition.test(this)){ // If the condition holds
-			plan.execute(this);   // Then execute the plan
+			lastIntendedAction = plan.execute(this);   // Then execute the plan
 			// Reschedule another repeat-while call for the next cycle: 
 			suspendToNextDeliberationCycle(new RunOncePlan(){
 				@Override
-				public void executeOnce(final PlanToAgentInterface planInt) throws PlanExecutionError {
-					planInt.repeatWhile(condition, plan);
+				public Object executeOnce(final PlanToAgentInterface planInt) throws PlanExecutionError {
+					return planInt.repeatWhile(condition, plan);
 				}
 			});
-		} 
+		}
+		return lastIntendedAction;
 	}
 	
 	/** Suspend a plan to the next deliberation cycle. This is ideal if for instance other current plans should be executed first.  */
@@ -323,8 +330,8 @@ public final class PlanToAgentInterface {
 				V value = task.call();									// Wait until the task is done
 				this.agent.asynchronousAdoptPlan(new RunOncePlan(){ 
 					@Override
-					public void executeOnce(PlanToAgentInterface planInt) throws PlanExecutionError {
-						plan.execute(value, planInt);
+					public Object executeOnce(PlanToAgentInterface planInt) throws PlanExecutionError {
+						return plan.execute(value, planInt);
 					} 
 				});
 			} catch (Exception e) { 
@@ -345,8 +352,8 @@ public final class PlanToAgentInterface {
 				V value = task.get();
 				this.agent.asynchronousAdoptPlan(new RunOncePlan(){ 
 					@Override
-					public void executeOnce(PlanToAgentInterface planInt) throws PlanExecutionError {
-						plan.execute(value, planInt);
+					public Object executeOnce(PlanToAgentInterface planInt) throws PlanExecutionError {
+						return plan.execute(value, planInt);
 					} 
 				});
 			} catch (Exception e) { 

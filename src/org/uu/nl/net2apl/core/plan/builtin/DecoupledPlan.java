@@ -13,6 +13,6 @@ import org.uu.nl.net2apl.core.plan.PlanExecutionError;
 public abstract class DecoupledPlan extends Plan { 
 	/** {@inheritDoc} */
 	@Override
-	public final void execute(final PlanToAgentInterface planInterface) throws PlanExecutionError {}
-	public abstract void execute(final Trigger trigger, final PlanToAgentInterface planInterface) throws PlanExecutionError;
+	public final Object execute(final PlanToAgentInterface planInterface) throws PlanExecutionError {return null;}
+	public abstract Object execute(final Trigger trigger, final PlanToAgentInterface planInterface) throws PlanExecutionError;
 }

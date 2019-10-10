@@ -3,7 +3,13 @@ package org.uu.nl.net2apl.core.deliberation;
 import org.uu.nl.net2apl.core.agent.Agent;
 import org.uu.nl.net2apl.core.agent.AgentID;
 import org.uu.nl.net2apl.core.plan.PlanExecutionError;
-import org.uu.nl.net2apl.core.platform.Platform; 
+import org.uu.nl.net2apl.core.platform.Platform;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+
 /**
  * A deliberation runnable implements how an agent is executed. This is done by 
  * grabbing the agent's deliberation cycle and execute each step. Then, if the 
@@ -11,11 +17,13 @@ import org.uu.nl.net2apl.core.platform.Platform;
  *
  * @author Bas Testerink
  */
-public final class DeliberationRunnable implements Runnable { 
+public final class DeliberationRunnable implements Callable<List<Object>> {
 	/** Interface to obtain the relevant agent's data. */
 	private final Agent agent;
 	/** Interface to the relevant platform functionalities. */
 	private final Platform platform;
+
+	private ArrayList<Object> intendedActions;
 
 	/**
 	 * Creation of the deliberation runnable will also result in the setting of a self-rescheduler for this runnable  
@@ -23,7 +31,7 @@ public final class DeliberationRunnable implements Runnable {
 	 * @param agent
 	 * @param platform
 	 */
-	public DeliberationRunnable(final Agent agent, final Platform platform){
+	public DeliberationRunnable(final Agent agent, final Platform platform) {
 		this.agent = agent;
 		this.platform = platform;
 		this.agent.setSelfRescheduler(new SelfRescheduler(this));
@@ -38,13 +46,20 @@ public final class DeliberationRunnable implements Runnable {
 	 * killed and removed from the platform.
 	 */
 	@Override
-	public void run(){
+	public List<Object> call(){
 		if(!this.agent.isDone()){ // Check first if agent was killed outside of this runnable
-			try {   
+            // Clear intended actions potential previous deliberation cycle
+            this.intendedActions = new ArrayList<>();
+
+			try {
 				// Go through the cycle and execute each step.
 				// Note that the deliberation cycle cannot change at runtime.  
-				for(DeliberationStep step : this.agent.getDeliberationCycle()){
+				for(DeliberationStep step : this.agent.getSenseReasonCycle()){
 					step.execute();
+				}
+
+				for(DeliberationActionStep step : this.agent.getActCycle()) {
+					this.intendedActions.addAll(step.execute());
 				}
 
 				// If all deliberation steps are finished, then check whether
@@ -62,7 +77,7 @@ public final class DeliberationRunnable implements Runnable {
 								agent.getAID().getName()));
 					}
 				}
-			} catch(DeliberationStepException exception){ 
+			} catch(DeliberationStepException exception){
 				// Deliberation exceptions should not occur. The agent is 
 				// killed and removed from the platform. All proxy's are
 				// notified of the agent's death. The rest of the multi-
@@ -70,8 +85,14 @@ public final class DeliberationRunnable implements Runnable {
 				Platform.getLogger().log(getClass(), exception);
 				this.platform.killAgent(this.agent.getAID());
 			}
+
+            // Produce the set of intended actions
+            return intendedActions;
 		} else {
 			initiateShutdown(agent);
+
+			// An agent that shuts down will no longer perform actions
+            return Collections.emptyList();
 		}
 	}
 
@@ -89,7 +110,7 @@ public final class DeliberationRunnable implements Runnable {
 		);
 		this.platform.killAgent(agent.getAID());
 	}
-	
+
 	/** Returns the id of the agent to which this runnable belongs. */
 	public final AgentID getAgentID(){ return this.agent.getAID(); }
 	

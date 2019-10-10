@@ -10,13 +10,13 @@ import org.uu.nl.net2apl.core.fipa.ams.DirectoryFacilitator;
 import org.uu.nl.net2apl.core.logging.ConsoleLogger;
 import org.uu.nl.net2apl.core.logging.Loggable;
 import org.uu.nl.net2apl.core.messaging.Messenger;
+import org.uu.nl.net2apl.core.tick.DefaulThreadpoolTickExecutor;
+import org.uu.nl.net2apl.core.tick.TickExecutor;
 
 import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * A Platform is a container that maintains the available thread pool, agent factories, 
@@ -54,7 +54,7 @@ public final class Platform {
 	private int port;
 	
 	/** The thread pool that is used to execute agents. */
-	private final ExecutorService threadPool;
+	private final TickExecutor tickExecutor;
 	/** The factories that can produce components from which agents are made. */
 	/** Kill switches that can force an agent to stop executing the next time it wants to deliberate. */
 	private final Map<AgentID, AgentKillSwitch> agentKillSwitches; 
@@ -69,14 +69,14 @@ public final class Platform {
 	private final Set<AgentID> remoteDfs;
 	private final ArrayList<String> remoteHosts;
 	private final ArrayList<Integer> remotePorts;
-	
+
 	/**
 	 * Sets the threadpool to a new FixedThreadPool with the given amount of execution threads. 
 	 * @param nrOfExecutionThreads Number of execution threads that are available for executing agents.
 	 * @param messenger Messenger that agents will use to communicate.
 	 */
-	private Platform(final int nrOfExecutionThreads, final Messenger<?> messenger){
-		this.threadPool = Executors.newFixedThreadPool(nrOfExecutionThreads);
+	private Platform(TickExecutor executor, final Messenger<?> messenger){
+		this.tickExecutor = executor;
 		this.messenger = messenger;
 		this.agentKillSwitches = new HashMap<>(); 
 		this.registeredAgents=new HashMap<>();
@@ -95,7 +95,7 @@ public final class Platform {
 	 * @param messenger Messenger for agent to agent communication. Will be the default messenger in case the argument is null.
 	 * @return An interface to control the platform.
 	 */
-	public final static Platform newPlatform(final int nrOfExecutionThreads, final Messenger<?> messenger, String host, int port, ArrayList<String> otherHosts, ArrayList<Integer> otherPorts) {
+	public final static Platform newPlatform(TickExecutor executor, final Messenger<?> messenger, String host, int port, ArrayList<String> otherHosts, ArrayList<Integer> otherPorts) {
 		if (host == null || host == "") {
 			host = GetInitialLocalHost();
 		}
@@ -104,11 +104,11 @@ public final class Platform {
 		}
 		Platform platform;
 		if(messenger == null){
-			platform = new Platform(nrOfExecutionThreads, new DefaultMessenger());
+			platform = new Platform(executor, new DefaultMessenger());
 		} else if (! messenger.implementsEncoding()) {
-			platform = new Platform(nrOfExecutionThreads, messenger);
+			platform = new Platform(executor, messenger);
 		} else {
-			platform = new Platform(nrOfExecutionThreads, new NetNode<>(messenger, host, port));
+			platform = new Platform(executor, new NetNode<>(messenger, host, port));
 		}
 		platform.host = host;
 		platform.port = port;
@@ -124,11 +124,20 @@ public final class Platform {
 	}
 
 	public final static Platform newPlatform(final int nrOfExecutionThreads, final Messenger<?> messenger, String host, int port) {
-		return newPlatform(nrOfExecutionThreads, messenger, host, port, null, null);
+		TickExecutor executor = new DefaulThreadpoolTickExecutor(nrOfExecutionThreads);
+		return newPlatform(executor, messenger, host, port, null, null);
 	}
 	
 	public final static Platform newPlatform(final int nrOfExecutionThreads, final Messenger<?> messenger) {
 		return newPlatform(nrOfExecutionThreads, messenger, GetInitialLocalHost(), defaultPort);
+	}
+
+	public final static Platform newPlatform(final TickExecutor executor, final Messenger<?> messenger, String host, int port) {
+		return newPlatform(executor, messenger, host, port, null, null);
+	}
+
+	public final static Platform newPlatform(final TickExecutor executor, final Messenger<?> messenger) {
+		return newPlatform(executor, messenger, GetInitialLocalHost(), defaultPort);
 	}
 	
 	public final String getHost() {
@@ -251,16 +260,8 @@ public final class Platform {
 	 * @param deliberationRunnable Deliberation cycle to be executed sometime in the future.
 	 */
 	public final void scheduleForExecution(final DeliberationRunnable deliberationRunnable){
-		boolean scheduled = false;
-		synchronized(this.threadPool){
-			if(!this.threadPool.isShutdown()){
-				scheduled = true;
-				this.threadPool.execute(deliberationRunnable);
-			}
-		}
-		// If the thread pool was already shut down, then kill the agent
-		if(!scheduled){
-			killAgent(deliberationRunnable.getAgentID());
+		synchronized(this.tickExecutor){
+			this.tickExecutor.scheduleForNextTick(deliberationRunnable);
 		}
 	}
 
@@ -290,8 +291,9 @@ public final class Platform {
 	public final void haltPlatform() {
 		getLogger().log(getClass(), "Halting platform");
 		
-		synchronized(this.threadPool){ // Synchronized, otherwise an agent could be scheduled after a shutdown
-			this.threadPool.shutdown();
+		synchronized(this.tickExecutor){ // Synchronized, otherwise an agent could be scheduled after a shutdown
+			// TODO do we need to shut down?
+			//this.tickExecutor.shutdown();
 		}
 	}
 	
@@ -319,4 +321,7 @@ public final class Platform {
 		return messenger;
 	}
 
+	public TickExecutor getTickExecutor() {
+		return this.tickExecutor;
+	}
 }

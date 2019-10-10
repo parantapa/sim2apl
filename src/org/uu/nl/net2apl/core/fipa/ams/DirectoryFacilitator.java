@@ -61,9 +61,9 @@ public class DirectoryFacilitator extends Agent {
 	private static Plan getInitialPlan() {
 		return new RunOncePlan() {
 			@Override
-			public void executeOnce(PlanToAgentInterface planInterface) throws PlanExecutionError {
+			public Object executeOnce(PlanToAgentInterface planInterface) throws PlanExecutionError {
 				try {
-					List<Set<AgentID>> agentsLists = new ArrayList<Set<AgentID>>();
+					List<Set<AgentID>> agentsLists = new ArrayList<>();
 					agentsLists.add(planInterface.getAgent().getPlatform().getLocalAgentsSet()); // TODO: Add initial Agents to arguments (and eventually pass to Context?)
 					agentsLists.add(planInterface.getContext(DirectoryFacilitatorContext.class).getOtherDFs());
 					agentsLists.forEach((agents) ->
@@ -93,6 +93,7 @@ public class DirectoryFacilitator extends Agent {
 				} catch (Exception ex) {
 					logger.log(DirectoryFacilitator.class, Level.WARNING, ex);
 				}
+				return null;
 			}
 		};
 	}
@@ -265,7 +266,8 @@ public class DirectoryFacilitator extends Agent {
 					if (! asProxy) { // If we're not a proxy ourselves this turn, notify other known DFs of the request.
 						forwardToOtherDf( planInterface, dfContext.getOtherDFs(), received.getConversationId(), received.getContent() );
 					}
-					
+
+					return null;
 				};
 			
 			case PROPOSE: // Some other DF just proposed that we should register.
@@ -274,6 +276,7 @@ public class DirectoryFacilitator extends Agent {
 				return (planInterface) -> {
 					planInterface.getContext(DirectoryFacilitatorContext.class).addOtherDF(received.getSender());
 					logger.log(DirectoryFacilitator.class, Level.FINER, "DF: I now know another DF (via remote Message): " + received.getSender());
+					return null;
 				};
 			
 //			case QUERY_REF: // Answer 'search' query for a service.
@@ -285,6 +288,7 @@ public class DirectoryFacilitator extends Agent {
 				return (planInterface) -> {
 					logger.log(DirectoryFacilitator.class, Level.WARNING, "Someone didn't understand a message I sent!");
 					// TODO: Send message back.
+					return null;
 				};
 				
 			default: // No other performatives are understood.
@@ -293,6 +297,7 @@ public class DirectoryFacilitator extends Agent {
 //					replyMessage(planInterface, received, Performative.NOT_UNDERSTOOD,
 //							"Performative not supported by DirectoryFacilitator."); // TODO what is our message-content
 //																					// onthology?
+					return null;
 				};
 			}
 		} else {
@@ -306,6 +311,7 @@ public class DirectoryFacilitator extends Agent {
 			return (planInterface) -> {
 				planInterface.getContext(DirectoryFacilitatorContext.class).addOtherDF(remoteID);
 				logger.log(DirectoryFacilitator.class, Level.FINER, "DF: I now know another DF (directly by NetNode): " + remoteID);
+				return null;
 			};
 		} else {
 			return SubPlanInterface.UNINSTANTIATED;

@@ -1,6 +1,7 @@
 package org.uu.nl.net2apl.core.agent;
 
 import org.uu.nl.net2apl.core.defaults.messenger.MessageReceiverNotFoundException;
+import org.uu.nl.net2apl.core.deliberation.DeliberationActionStep;
 import org.uu.nl.net2apl.core.deliberation.DeliberationStep;
 import org.uu.nl.net2apl.core.deliberation.SelfRescheduler;
 import org.uu.nl.net2apl.core.fipa.FIPAAgentState;
@@ -64,8 +65,11 @@ public class Agent implements AgentInterface{
 	/** The agent will try to execute these on shutdown/kill. */
 	private final List<Plan> downPlans;
 	
-	/** The deliberation cycle of the agent. */
-	private final List<DeliberationStep> deliberationCycle;
+	/** The sense-reason part of the deliberation cycle of the agent. */
+	private final List<DeliberationStep> senseReasonCycle;
+
+	/** The act part of the deliberation cycle of the agent. */
+	private final List<DeliberationActionStep> actCycle;
 	
 	/** Whether the agent is forced to stop, is finished, or is sleeping. */
 	private boolean forciblyStop, finished;
@@ -90,7 +94,8 @@ public class Agent implements AgentInterface{
 		this.planSchemeBase = args.createPlanSchemeBase();
 		this.plans = new ArrayList<>();
 		this.downPlans = new ArrayList<>();
-		this.deliberationCycle = Collections.unmodifiableList(args.createDeliberationCycle(this));
+		this.senseReasonCycle = Collections.unmodifiableList(args.createSenseReasonCycle(this));
+		this.actCycle = Collections.unmodifiableList(args.createActCycle(this));
 		this.contextInterface = new AgentContextInterface(this);
 
 		this.messageQueue = new ConcurrentLinkedQueue<>();
@@ -202,9 +207,11 @@ public class Agent implements AgentInterface{
 	 * goal is not relevant anymore (because it is not in the list of current goals anymore) 
 	 * then the plan will not be executed.
 	 */
-	public final void executePlan(final Plan plan) throws PlanExecutionError {
+	public final Object executePlan(final Plan plan) throws PlanExecutionError {
 		if(plan.goalIsRelevant(this.planInterface))
-			plan.execute(this.planInterface);
+			return plan.execute(this.planInterface);
+
+		return null;
 	} 
 	
 	// vvv vvv vvv
@@ -477,9 +484,7 @@ public class Agent implements AgentInterface{
 			return true;
 		} else return false;
 	}
-	
-	
-	
+
 	/** Get a new list with the current instantiated plans of the agent.	 */
 	public final List<Plan> getPlans(){ 
 		synchronized(this.plans){
@@ -494,14 +499,14 @@ public class Agent implements AgentInterface{
 			else return new ArrayList<>(this.downPlans); 
 		}
 	}
-	
+
 	/** Remove a plan from the list of current plans. */
 	public final void removePlan(final Plan plan){
 		synchronized(this.plans){
 			this.plans.remove(plan);
 		}
 	}
-	
+
 	///////////////////////////////////
 	//// KILL SWITCH FUNCTIONALITY ////
 	///////////////////////////////////
@@ -557,9 +562,13 @@ public class Agent implements AgentInterface{
 	 
 	
 	/** Obtain the agent's deliberation cycle. */
-	public final List<DeliberationStep> getDeliberationCycle(){
-		return this.deliberationCycle;
+	public final List<DeliberationStep> getSenseReasonCycle(){
+		return this.senseReasonCycle;
 	}
+
+	/** Obtain the act part of the deliberation cycle. THis is the only part of the cycle that is
+	 * allowed to produce actions */
+	public final List<DeliberationActionStep> getActCycle() { return this.actCycle; }
 
 	public Platform getPlatform() throws PlatformNotFoundException{
 		if(planInterface==null) {
