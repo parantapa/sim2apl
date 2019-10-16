@@ -2,9 +2,10 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>ga.iss.org.uu.nl</groupId>
-	<artifactId>net2apl.core</artifactId>
+	<groupId>nl.uu.iss.ga</groupId>
+	<artifactId>sim2apl</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
 	<name>Sim2APL</name>
 	<description>A 2APL client for time step synchronized execution of agents, aimed at reproducible simulations</description>
 
@@ -25,8 +26,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.1</version>
 				<configuration>
-					<source>11</source>
-					<target>11</target>
+					<source>12</source>
+					<target>12</target>
 				</configuration>
 			</plugin>
 
