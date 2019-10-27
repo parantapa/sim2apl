@@ -78,7 +78,7 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
     private void doTick() {
         int tick = this.executor.getCurrentTick();
         this.processTickPreHooks(tick);
-        HashMap<AgentID, List<Object>> agentActions = this.executor.doTick();
+        HashMap<AgentID, List<String>> agentActions = this.executor.doTick();
         this.processTickPostHook(tick, executor.getLastTickDuration(), agentActions);
     }
 }

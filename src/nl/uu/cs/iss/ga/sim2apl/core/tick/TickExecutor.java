@@ -31,7 +31,7 @@ public interface TickExecutor {
      * @return Hashmap of agent ID's and a list of requested actions for that
      * agent
      */
-    HashMap<AgentID, List<Object>> doTick();
+    HashMap<AgentID, List<String>> doTick();
 
     /**
      * Obtain the current tick index, indicating how many ticks have already

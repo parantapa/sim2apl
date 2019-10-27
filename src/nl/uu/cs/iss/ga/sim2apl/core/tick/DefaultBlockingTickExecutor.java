@@ -51,7 +51,7 @@ public class DefaultBlockingTickExecutor implements TickExecutor {
      * {@inheritDoc}
      */
     @Override
-    public HashMap<AgentID, List<Object>> doTick() {
+    public HashMap<AgentID, List<String>> doTick() {
         ArrayList<DeliberationRunnable> runnables;
         // TODO make sure running can only happen once with some sort of mutex? How to verify if a tick is currently being executed?
         synchronized (this.scheduledRunnables) {
@@ -59,15 +59,21 @@ public class DefaultBlockingTickExecutor implements TickExecutor {
             this.scheduledRunnables.clear();
         }
 
-        HashMap<AgentID, List<Object>> agentPlanActions = new HashMap<>();
+        HashMap<AgentID, List<String>> agentPlanActions = new HashMap<>();
 
         long startTime = System.currentTimeMillis();
         for(DeliberationRunnable dr : runnables) {
             try {
                 List<Object> currentAgentActions = this.executor.submit(dr).get();
-                agentPlanActions.put(
-                        dr.getAgentID(),
-                        currentAgentActions.stream().filter(Objects::nonNull).collect(Collectors.toList()));
+                currentAgentActions = currentAgentActions.stream().filter(Objects::nonNull).collect(Collectors.toList());
+                
+                List<String> currentAgentActionStrings = new ArrayList<>();
+                for (Object action: currentAgentActions) {
+                    currentAgentActionStrings.add((String) action);
+                }
+                
+                agentPlanActions.put(dr.getAgentID(), currentAgentActionStrings);
+                
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }

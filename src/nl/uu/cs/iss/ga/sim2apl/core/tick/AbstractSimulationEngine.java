@@ -80,7 +80,7 @@ public abstract class AbstractSimulationEngine implements SimulationEngine {
      * @param lastTickDuration  The duration of the last tick in milliseconds
      * @param actions           The hashmap of agent-actions produced during the last tick
      */
-    protected void processTickPostHook(int finishedTick, int lastTickDuration, HashMap<AgentID, List<Object>> actions) {
+    protected void processTickPostHook(int finishedTick, int lastTickDuration, HashMap<AgentID, List<String>> actions) {
         this.tickHookProcessorList.forEach(tph -> tph.tickPostHook(finishedTick, lastTickDuration, actions));
     }
 
