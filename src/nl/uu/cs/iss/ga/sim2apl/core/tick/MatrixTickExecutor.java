@@ -3,10 +3,7 @@ package nl.uu.cs.iss.ga.sim2apl.core.tick;
 import nl.uu.cs.iss.ga.sim2apl.core.agent.AgentID;
 import nl.uu.cs.iss.ga.sim2apl.core.deliberation.DeliberationRunnable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,6 +22,11 @@ public class MatrixTickExecutor implements TickExecutor {
     /** Internal counters **/
     private int tick = 0;
     private int stepDuration = -1;
+
+    /**
+     * A random object, which can be used to have agent execution occur in deterministic manner
+     */
+    private Random random;
 
     /** The ExecutorService that will be used to execute one sense-reason-act step for all scheduled agents **/
     private final ExecutorService executor;
@@ -46,6 +48,21 @@ public class MatrixTickExecutor implements TickExecutor {
         
         this.agentThread = new MatrixAgentThread(0, CONTROLLER_ADDRESS, CONTROLLER_PORT, this.executor);
         this.storeThread = new MatrixStoreThread(0, CONTROLLER_ADDRESS, CONTROLLER_PORT);
+    }
+
+    /**
+     * Constructor that allows setting a (seeded) random, for ordering deliberation cycles
+     * before each tick.
+     *
+     * <b>NOTICE:</b> when the number of threads is larger then 1, some variation in order of
+     * agent execution may still occur. If agents use the same random object for selecting actions,
+     * the nextInt they receive may no longer be deterministic
+     * @param nThreads  Number of threads to use to execute the agent's sense-reason-act cycles.
+     * @param random    A (seeded) random object
+     */
+    public MatrixTickExecutor(int nThreads, Random random) {
+        this(nThreads);
+        this.random = random;
     }
 
     /**
@@ -75,6 +92,11 @@ public class MatrixTickExecutor implements TickExecutor {
         synchronized (this.scheduledRunnables) {
             runnables = new ArrayList<>(this.scheduledRunnables);
             this.scheduledRunnables.clear();
+        }
+
+        if(this.random != null) {
+            runnables.sort(Comparator.comparing(deliberationRunnable -> deliberationRunnable.getAgentID().getUuID()));
+            Collections.shuffle(runnables, this.random);
         }
         
         try {
