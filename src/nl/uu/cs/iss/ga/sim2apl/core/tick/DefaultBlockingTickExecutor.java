@@ -3,10 +3,7 @@ package nl.uu.cs.iss.ga.sim2apl.core.tick;
 import nl.uu.cs.iss.ga.sim2apl.core.agent.AgentID;
 import nl.uu.cs.iss.ga.sim2apl.core.deliberation.DeliberationRunnable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
@@ -19,6 +16,11 @@ public class DefaultBlockingTickExecutor implements TickExecutor {
     /** Internal counters **/
     private int tick = 0;
     private int stepDuration;
+
+    /**
+     * A random object, which can be used to have agent execution occur in deterministic manner
+     */
+    private Random random;
 
     /** The ExecutorService that will be used to execute one sense-reason-act step for all scheduled agents **/
     private final ExecutorService executor;
@@ -33,6 +35,21 @@ public class DefaultBlockingTickExecutor implements TickExecutor {
     public DefaultBlockingTickExecutor(int nThreads) {
         this.executor = Executors.newFixedThreadPool(nThreads);
         this.scheduledRunnables = new ArrayList<>();
+    }
+
+    /**
+     * Constructor that allows setting a (seeded) random, for ordering deliberation cycles
+     * before each tick.
+     *
+     * <b>NOTICE:</b> when the number of threads is larger then 1, some variation in order of
+     * agent execution may still occur. If agents use the same random object for selecting actions,
+     * the nextInt they receive may no longer be deterministic
+     * @param nThreads  Number of threads to use to execute the agent's sense-reason-act cycles.
+     * @param random    A (seeded) random object
+     */
+    public DefaultBlockingTickExecutor(int nThreads, Random random) {
+        this(nThreads);
+        this.random = random;
     }
 
     /**
@@ -57,6 +74,11 @@ public class DefaultBlockingTickExecutor implements TickExecutor {
         synchronized (this.scheduledRunnables) {
             runnables = new ArrayList<>(this.scheduledRunnables);
             this.scheduledRunnables.clear();
+        }
+
+        if(this.random != null) {
+            runnables.sort(Comparator.comparing(deliberationRunnable -> deliberationRunnable.getAgentID().getUuID()));
+            Collections.shuffle(runnables, this.random);
         }
 
         HashMap<AgentID, List<String>> agentPlanActions = new HashMap<>();
