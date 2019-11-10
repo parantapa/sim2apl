@@ -23,7 +23,7 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
     /** The TickExecutor is obtained from the platform. By default, the DefaultTickExecutor is used, but this can
      * be overridden by specifying a custom TickExecutor at platform creation */
     private final TickExecutor executor;
-
+    
     /**
      * {@inheritDoc}
      */
@@ -77,8 +77,12 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
      */
     private void doTick() {
         int tick = this.executor.getCurrentTick();
+        System.out.printf("TIME_LOG: TICK %d PREHOOK %d\n", tick, System.currentTimeMillis());
         this.processTickPreHooks(tick);
+        System.out.printf("TIME_LOG: TICK %d ACT %d\n", tick, System.currentTimeMillis());
         HashMap<AgentID, List<String>> agentActions = this.executor.doTick();
+        System.out.printf("TIME_LOG: TICK %d POSTHOOK %d\n", tick, System.currentTimeMillis());
         this.processTickPostHook(tick, executor.getLastTickDuration(), agentActions);
+        System.out.printf("TIME_LOG: TICK %d FINISHED %d\n", tick, System.currentTimeMillis());
     }
 }
