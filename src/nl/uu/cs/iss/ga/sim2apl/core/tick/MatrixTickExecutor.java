@@ -108,7 +108,7 @@ public class MatrixTickExecutor implements TickExecutor {
         }
         HashMap<AgentID, List<String>> agentPlanActions = null;
         try {
-            LOG.info("Waiting for ");
+            LOG.info("Waiting for store output");
             agentPlanActions = this.storeThread.outq.take();
             if (agentPlanActions == null) {
                 finished = true;
