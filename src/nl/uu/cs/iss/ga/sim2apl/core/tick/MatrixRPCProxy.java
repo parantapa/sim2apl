@@ -139,7 +139,7 @@ public class MatrixRPCProxy
         params.add("events", events);
         this.call("register_events", params);
 
-        LOG.info(String.format("Agent %d, sent %d events", agentproc_id, events.size()));
+        //LOG.info(String.format("Agent %d, sent %d events", agentproc_id, events.size()));
     }
 
     public Pair<String, JsonArray> get_events(int storeproc_id) {
@@ -150,7 +150,7 @@ public class MatrixRPCProxy
         String code = response.getAsJsonObject().get("code").getAsString();
         if ("EVENTS".equals(code)) {
             JsonArray updates = response.getAsJsonObject().get("events").getAsJsonArray();
-            LOG.info(String.format("Store %d: Received %d updates", storeproc_id, updates.size()));
+            //LOG.info(String.format("Store %d: Received %d updates", storeproc_id, updates.size()));
             return new Pair<>(code, updates);
         } else  if ("FLUSH".equals(code)) {
             LOG.info(String.format("Store %d: Received flush", storeproc_id));
