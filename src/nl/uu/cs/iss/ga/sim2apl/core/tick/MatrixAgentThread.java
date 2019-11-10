@@ -23,6 +23,8 @@ import nl.uu.cs.iss.ga.sim2apl.core.deliberation.DeliberationRunnable;
 public class MatrixAgentThread implements Runnable {
     private static final Logger LOG = Logger.getLogger(MatrixAgentThread.class.getName());
     
+    private static final int UPDATE_BATCH_SIZE = 1000;
+    
     private int agentproc_id = -1;
     private MatrixRPCProxy proxy = null;
     
@@ -66,6 +68,7 @@ public class MatrixAgentThread implements Runnable {
                 long startTime = System.currentTimeMillis();
                 
                 List<DeliberationRunnable> runnables = inq.take();
+                JsonArray updates = new JsonArray();
                 for(DeliberationRunnable dr : runnables) {
                     try {
                         List<Object> currentAgentActions = this.executor.submit(dr).get();
@@ -80,13 +83,18 @@ public class MatrixAgentThread implements Runnable {
                         JsonObject update = new JsonObject();
                         update.addProperty("agentID", agentID);
                         update.add("actions", gson.toJsonTree(currentAgentActionStrings, arrayListStringType));
-                        JsonArray updates = new JsonArray();
                         updates.add(update);
-                        this.proxy.register_events(agentproc_id, updates);
+                        if (updates.size() >= UPDATE_BATCH_SIZE) {
+                            this.proxy.register_events(agentproc_id, updates);
+                            updates = new JsonArray();
+                        }
                     } catch (InterruptedException | ExecutionException ex) {
                         LOG.severe("Error running runnable: " + ex.toString());
                         ex.printStackTrace();
                     }
+                }
+                if (updates.size() > 0) {
+                    this.proxy.register_events(agentproc_id, updates);
                 }
                 long stepDuration = (long) (System.currentTimeMillis() - startTime);
                 LOG.info(String.format("Agent thread %d: Round %d: Event production took %d ms", agentproc_id, cur_round, stepDuration));
