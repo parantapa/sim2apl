@@ -66,11 +66,14 @@ public class MatrixAgentThread implements Runnable {
                 }
                 
                 long startTime = System.currentTimeMillis();
+                long produceTime = 0;
+                long sendTime = 0;
                 
                 List<DeliberationRunnable> runnables = inq.take();
                 JsonArray updates = new JsonArray();
                 for(DeliberationRunnable dr : runnables) {
                     try {
+                        long produceStart = System.currentTimeMillis();
                         List<Object> currentAgentActions = this.executor.submit(dr).get();
                         currentAgentActions = currentAgentActions.stream().filter(Objects::nonNull).collect(Collectors.toList());
                         
@@ -84,9 +87,14 @@ public class MatrixAgentThread implements Runnable {
                         update.addProperty("agentID", agentID);
                         update.add("actions", gson.toJsonTree(currentAgentActionStrings, arrayListStringType));
                         updates.add(update);
+                        
+                        produceTime += System.currentTimeMillis() - produceStart;
+                        
                         if (updates.size() >= UPDATE_BATCH_SIZE) {
+                            long sendStart = System.currentTimeMillis();
                             this.proxy.register_events(agentproc_id, updates);
                             updates = new JsonArray();
+                            sendTime += System.currentTimeMillis() - sendStart;
                         }
                     } catch (InterruptedException | ExecutionException ex) {
                         LOG.severe("Error running runnable: " + ex.toString());
@@ -94,10 +102,12 @@ public class MatrixAgentThread implements Runnable {
                     }
                 }
                 if (updates.size() > 0) {
+                    long sendStart = System.currentTimeMillis();
                     this.proxy.register_events(agentproc_id, updates);
+                    sendTime += System.currentTimeMillis() - sendStart;
                 }
                 long stepDuration = (long) (System.currentTimeMillis() - startTime);
-                LOG.info(String.format("Agent thread %d: Round %d: Event production took %d ms", agentproc_id, cur_round, stepDuration));
+                LOG.info(String.format("Agent thread %d: Round %d: Event production took %d ms (%d, %d)", agentproc_id, cur_round, stepDuration, produceTime, sendTime));
             }
         } catch (InterruptedException ex) {
             LOG.severe("Got Interrupted:" + ex.toString());
