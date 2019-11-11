@@ -131,6 +131,10 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
         }
         this.processSimulationFinishedHook(this.nIterations, executor.getLastTickDuration());
         this.executor.shutdown();
+        if (time_log != null) {
+            time_log.flush();
+            time_log.close();
+        }
         return true;
     }
 
@@ -153,6 +157,7 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
         this.processTickPostHook(tick, executor.getLastTickDuration(), agentActions);
         if (time_log != null) {
             time_log.printf("TIME_LOG: TICK %d FINISHED %d\n", tick, System.currentTimeMillis());
+            time_log.flush();
         }
     }
 }
