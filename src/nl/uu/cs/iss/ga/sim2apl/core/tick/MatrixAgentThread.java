@@ -23,7 +23,7 @@ import nl.uu.cs.iss.ga.sim2apl.core.deliberation.DeliberationRunnable;
 public class MatrixAgentThread implements Runnable {
     private static final Logger LOG = Logger.getLogger(MatrixAgentThread.class.getName());
     
-    private static final int UPDATE_BATCH_SIZE = 10000;
+    private static final int UPDATE_BATCH_SIZE = 100000;
     
     private int agentproc_id = -1;
     private MatrixRPCProxy proxy = null;
