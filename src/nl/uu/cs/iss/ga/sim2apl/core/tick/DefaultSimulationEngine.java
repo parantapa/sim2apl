@@ -1,5 +1,9 @@
 package nl.uu.cs.iss.ga.sim2apl.core.tick;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import nl.uu.cs.iss.ga.sim2apl.core.agent.AgentID;
 import nl.uu.cs.iss.ga.sim2apl.core.platform.Platform;
 
@@ -24,12 +28,28 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
      * be overridden by specifying a custom TickExecutor at platform creation */
     private final TickExecutor executor;
     
+    private final PrintWriter time_log;
+    
     /**
      * {@inheritDoc}
      */
     public DefaultSimulationEngine(Platform platform, int nIterations, TickHookProcessor... hookProcessors) {
         super(platform, nIterations, hookProcessors);
         this.executor = platform.getTickExecutor();
+        
+        String log_fname = System.getenv("SIM2APL_TIMELOG");
+        if (log_fname == null) {
+            time_log = null;
+        } else {
+            FileWriter fwriter;
+            try {
+                fwriter = new FileWriter(log_fname);
+            } catch (IOException ex) {
+                throw new RuntimeException("Failed to open time_log file:" + ex.toString());
+            }
+            BufferedWriter bwriter = new BufferedWriter(fwriter);
+            time_log = new PrintWriter(bwriter);
+        }
     }
 
     /**
@@ -38,6 +58,20 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
     public DefaultSimulationEngine(Platform platform) {
         super(platform);
         this.executor = platform.getTickExecutor();
+        
+        String log_fname = System.getenv("SIM2APL_TIMELOG");
+        if (log_fname == null) {
+            time_log = null;
+        } else {
+            FileWriter fwriter;
+            try {
+                fwriter = new FileWriter(log_fname);
+            } catch (IOException ex) {
+                throw new RuntimeException("Failed to open time_log file:" + ex.toString());
+            }
+            BufferedWriter bwriter = new BufferedWriter(fwriter);
+            time_log = new PrintWriter(bwriter);
+        }
     }
 
     /**
@@ -46,6 +80,20 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
     public DefaultSimulationEngine(Platform platform, TickHookProcessor... processors) {
         super(platform, processors);
         this.executor = platform.getTickExecutor();
+        
+        String log_fname = System.getenv("SIM2APL_TIMELOG");
+        if (log_fname == null) {
+            time_log = null;
+        } else {
+            FileWriter fwriter;
+            try {
+                fwriter = new FileWriter(log_fname);
+            } catch (IOException ex) {
+                throw new RuntimeException("Failed to open time_log file:" + ex.toString());
+            }
+            BufferedWriter bwriter = new BufferedWriter(fwriter);
+            time_log = new PrintWriter(bwriter);
+        }
     }
 
     /**
@@ -54,6 +102,20 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
     public DefaultSimulationEngine(Platform platform, int iterations) {
         super(platform, iterations);
         this.executor = platform.getTickExecutor();
+        
+        String log_fname = System.getenv("SIM2APL_TIMELOG");
+        if (log_fname == null) {
+            time_log = null;
+        } else {
+            FileWriter fwriter;
+            try {
+                fwriter = new FileWriter(log_fname);
+            } catch (IOException ex) {
+                throw new RuntimeException("Failed to open time_log file:" + ex.toString());
+            }
+            BufferedWriter bwriter = new BufferedWriter(fwriter);
+            time_log = new PrintWriter(bwriter);
+        }
     }
 
     /**
@@ -77,12 +139,20 @@ public class DefaultSimulationEngine extends AbstractSimulationEngine {
      */
     private void doTick() {
         int tick = this.executor.getCurrentTick();
-        System.out.printf("TIME_LOG: TICK %d PREHOOK %d\n", tick, System.currentTimeMillis());
+        if (time_log != null) {
+            time_log.printf("TIME_LOG: TICK %d PREHOOK %d\n", tick, System.currentTimeMillis());
+        }
         this.processTickPreHooks(tick);
-        System.out.printf("TIME_LOG: TICK %d ACT %d\n", tick, System.currentTimeMillis());
+        if (time_log != null) {
+            time_log.printf("TIME_LOG: TICK %d ACT %d\n", tick, System.currentTimeMillis());
+        }
         HashMap<AgentID, List<String>> agentActions = this.executor.doTick();
-        System.out.printf("TIME_LOG: TICK %d POSTHOOK %d\n", tick, System.currentTimeMillis());
+        if (time_log != null) {
+            time_log.printf("TIME_LOG: TICK %d POSTHOOK %d\n", tick, System.currentTimeMillis());
+        }
         this.processTickPostHook(tick, executor.getLastTickDuration(), agentActions);
-        System.out.printf("TIME_LOG: TICK %d FINISHED %d\n", tick, System.currentTimeMillis());
+        if (time_log != null) {
+            time_log.printf("TIME_LOG: TICK %d FINISHED %d\n", tick, System.currentTimeMillis());
+        }
     }
 }
